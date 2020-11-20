@@ -36,15 +36,7 @@ include simpleflu.fred
 include stayhome.fred
 ```
 
-The use of separate files to contain sub-models helps to keep code organized, improves readability and promotes code reuse. Importantly the order that the sub-model files are specified here determines the order in which they will be processed by the compiler. This is important because FRED defines rules for how property definition statements and state update rule statements are overridden or updated by subsequent statements relating to the same property or state.
-
-#### TODO: Discuss state update rules in more detail
-
-In [The Structure of a FRED Program](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter4/chapter4.html#the-structure-of-a-fred-program) we are told that "Property definition statements occurring later in the program override any previous definitions for the same property." However I have not yet found where the rules for later redefinitions of state rules is specified in the user guide.
-
-Once a state has been defined within a condition, any statements in blocks corresponding to that state specified later in the programme are _appended_ to the rules specified previously, rather than replacing them.
-
-Propose we refer to this as 'state rule shadowing'
+The use of separate files to contain sub-models helps to keep code organized, improves readability and promotes code reuse. Importantly the order that the sub-model files are specified here determines the order in which they will be processed by the compiler. This is important because FRED defines rules for how property definition statements are [overridden by subsequent statements](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter4/chapter4.html#the-structure-of-a-fred-program), and how additional State execution rules can be specified later in the program to modify behavior (see discussion in [Section `stayhome.fred`](#stayhomefred)).
 
 ### `simpleflu.fred`
 
@@ -94,7 +86,7 @@ condition STAY_HOME {
 }
 ```
 
-The empty braces following the declaration of the `No` state causes it to be assigned the [**default configuration**](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#chapter-7-rules-for-states)--agents entering this state perform no actions and remain in this state indefinitely unless influenced by an external factor (including an action rule of a state belonging to a different Condition). The configuration of the `Yes` state demonstrates a feature of the FRED language which has not been demonstrated previously: the [`absent` and `present` actions](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#actions-affecting-an-agent-s-groups). If an agent is **absent** from a group or location, they do not attend that group even if they otherwise would. The statement `absent()` causes an agent to avoid _all_ groups or locations. Conversely `present(Household)` causes agents who were previously absent from their household to resume attending their household. The combination of the `absent()` and `present(Household)` actions in the definition of the `STAY_HOME.Yes` state cause agents entering that state to _exclusively_ attend their household (i.e. stay home). Finally the `wait()` wait rule and `next()` transition rule cause agents to remain in the `Yes` state indefinitely.
+The empty braces following the declaration of the `No` state causes it to be assigned the [**default configuration**](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#chapter-7-rules-for-states)--agents entering this state perform no actions and remain in this state indefinitely unless influenced by an external factor (including an action rule of a state belonging to a different Condition). It is significant that the `No` state is the first state specified in the `STAY_HOME` condition. This is because, unless an explicit `Start` state is defined, agents default to beginning the simulation in the state that is defined first in any Condition that applies to them. The configuration of the `Yes` state demonstrates a feature of the FRED language which has not been discussed previously: the [`absent` and `present` actions](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#actions-affecting-an-agent-s-groups). If an agent is **absent** from a group or location, they do not attend that group or location even if they otherwise would. The statement `absent()` causes an agent to avoid _all_ groups or locations. Conversely `present(Household)` causes agents who were previously absent from their household to resume attending their household. The combination of the `absent()` and `present(Household)` actions in the definition of the `STAY_HOME.Yes` state cause agents entering that state to _exclusively_ attend their household (i.e. stay home). Note that the effects of `absent` and `present` actions on an agent only apply while the agent remains in the state in which the actions were specified, and are reset when an agent leaves that state. This is why agents do not need to explicitly re-join their work when they enter the `STAY_HOME.No` state. Finally the `wait()` wait rule and `next()` transition rule cause agents to remain in the `Yes` state indefinitely.
 
 The remaining code blocks in `stayhome.fred` specify how agents decide to stay at home or not depending on their state with respect to the `INFLUENZA` condition.
 
@@ -105,19 +97,19 @@ state INFLUENZA.InfectiousSymptomatic {
 
 
 state INFLUENZA.Recovered {
-    set_state(STAY_HOME,Yes,No)
+    set_state(STAY_HOME,No)
 }
 ```
 
-Here `set_state` is [an action](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#actions-that-change-an-agent-s-state) that updates an agent's state. The statement `set_state(STAY_HOME,Yes,No)` in the `INFLUENZA.Recovered` code block causes agents entering the `INFLUENZA.Recovered` state whose `STAY_HOME` state is currently `Yes` to change their `STAY_HOME` state to `No`. The statement `if (bernoulli(0.5)==1) then set_state(STAY_HOME,Yes)` in the `INFLUENZA.InfectiousSymptomatic` code block is an example of a _conditional_ [action rule](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#action-rules). Any action rule can optionally include a conditional statement that causes the action to only be executed (on an agent-by-agent basis) if the associated predicate (or predicates) is true. In this case, each time an agent enters the `INFLUENZA.InfectiousSymptomatic` state, a Bernoulli trial with 0.5 probability of success is conducted (we might imagine the agent flips a coin). On a success, the agent changes its `STAY_HOME` state to `Yes`.
+Here `set_state` is an action that [updates an agent's state](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#actions-that-change-an-agent-s-state). The statement `set_state(STAY_HOME,No)` in the `INFLUENZA.Recovered` code block causes agents entering the `INFLUENZA.Recovered` change their `STAY_HOME` state to `No`--they are healthy again so they return to work and school. The statement `if (bernoulli(0.5)==1) then set_state(STAY_HOME,Yes)` in the `INFLUENZA.InfectiousSymptomatic` code block is an example of a _conditional_ [action rule](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#action-rules). Any action rule can optionally include a conditional statement that causes the action to be executed (on an agent-by-agent basis) only if the associated predicate (or predicates) is true. In this case, each time an agent enters the `INFLUENZA.InfectiousSymptomatic` state, a Bernoulli trial with 0.5 probability of success is conducted (we might imagine the agent flips a coin). On a success, the agent changes its `STAY_HOME` state to `Yes`.
 
-Because `stayhome.fred` is imported into `main.fred` after `simpleflu.fred`, the compiler appends the statements in the code blocks specified above to the end of the statements in the `INFLUENZA.InfectiousSymptomatic` and `INFLUENZA.Recovered` declarations in `simpleflu.fred`. It then interprets them _as if_ they had been declared according to [the following order](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#order-of-rule-execution-in-a-state):
+Because `stayhome.fred` is imported into `main.fred` after `simpleflu.fred`, the compiler appends the statements in the code blocks specified above to the end of the statements in the `INFLUENZA.InfectiousSymptomatic` and `INFLUENZA.Recovered` declarations in `simpleflu.fred`. It then interprets them in an order consistent with FRED's [State order of execution rules](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter7/chapter7.html#order-of-rule-execution-in-a-state). These stipulate that within a State:
 
-1. Action Rules
-2. Wait Rules
-3. Transition Rules
+1. all action rules are executed first,
+2. then all wait rules are executed, and
+3. finally all transition rules are executed.
 
-Consequently the code blocks in the previous code snippet in combination with the relevant statements in `simpleflu.fred` result in the following effective definitions of the `INFLUENZA.InfectiousSymptomatic` and `INFLUENZA.Recovered` states for the simulation overall.
+Consequently the code blocks in the previous code snippet in combination with the relevant statements in `simpleflu.fred` result in the following _effective_ definitions of the `INFLUENZA.InfectiousSymptomatic` and `INFLUENZA.Recovered` states for the simulation overall.
 
 ```fred
 state InfectiousSymptomatic {
@@ -136,11 +128,13 @@ state Recovered {
 }
 ```
 
-This is an example of modifying the state rules of a state that is assumed to have been previously defined in the program.
+This is an example of modifying the state rules of a State that is assumed to have been previously defined in the program.
 
 ## Sample model outputs
 
 ### Running the model
+
+Note that these instructions are for running a model locally. We may need to revisit this to explain how to run a model from a Docker image (see [discussion](https://epistemix.slack.com/archives/C01FCU4GNGH/p1605890953029300)).
 
 Open a terminal and navigate to the directory where the Flu with Behavior model is saved, for example:
 
