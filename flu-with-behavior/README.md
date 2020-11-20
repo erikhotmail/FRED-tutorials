@@ -27,9 +27,7 @@ simulation {
 }
 ```
 
-This is the same as the `simulation` code block from the Simple Flu model. It specifies that the model will be used to simulate the behavior of the synthetic population for Jefferson County, PA for the period January 1 2020 to May 1 2020.
-
-TODO: Explain the effect of including `weekly_data = 1`.
+This is the same as the `simulation` code block from the Simple Flu model. It specifies that the model will be used to simulate the behavior of the synthetic population for Jefferson County, PA for the period January 1 2020 to May 1 2020. By default FRED produces simulation outputs quantifying the evolution of the number of agents in each state on a daily basis in the directory `$FRED_HOME/RESULTS/JOB/<job_num>/OUT/<run_num>/DAILY`. Here `job_num` and `run_num` are, respectively, the job and run numbers for the simulations and are determined at runtime. If `weekly_data = 1` is specified, additional datasets are generated in `$FRED_HOME/RESULTS/JOB/<job_num>/OUT/<run_num>/WEEKLY` that correspond to the daily datasets, but aggregated to the [CDC epidemiological ('epi') week](https://wwwn.cdc.gov/nndss/document/MMWR_Week_overview.pdf) level.
 
 The remaining lines in `main.fred` demonstrate the use of [`include` statements](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter4/chapter4.html#include-statements) to import sub-models.
 
