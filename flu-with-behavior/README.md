@@ -174,11 +174,11 @@ In the following sections we demonstrate an exploratory model workflow in which 
 
 A major modeling assumption in the Flu with Behavior model that is that all agents experiencing symptoms of flu decided to stay home with 50% probability. As this assumption is subject to uncertainty, our exploratory analysis of the model should include a sensitivity analysis of the model to this parameter.
 
-To make varying the probability that symptomatic agents decide to stay home easier, we turn it into parameter called `probSympStayHome`. To do this we change the definition of the `INFLUENZA.InfectiousSymptomatic` in `stayhome.fred` to
+To make varying the probability that symptomatic agents decide to stay home easier, we turn it into parameter called `ProbSympStayHome`. To do this we change the definition of the `INFLUENZA.InfectiousSymptomatic` in `stayhome.fred` to
 
 ```fred
 state INFLUENZA.InfectiousSymptomatic {
-    if (bernoulli(probSympStayHome)==1) then set_state(STAY_HOME,Yes)
+    if (bernoulli(ProbSympStayHome)==1) then set_state(STAY_HOME,Yes)
 }
 ```
 
