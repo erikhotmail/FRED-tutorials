@@ -12,5 +12,6 @@ simulation {
 
 include simpleflu.fred
 include stayhome.fred
+include parameters.fred
 
 
