@@ -1,22 +1,22 @@
-# Flu with Behavior Model
+# Flu with Behavior model
 
 ## Introduction
 
-This model builds on the Simple Flu model (see `../simpleflu`) by equipping agents with rudimentary social distancing behavior. In the Simple Flu model, agents with the flu continue to behave in the same way as agents without the flu, and will continue to visit all the places they usually visit including work and school. In the Flu with Behavior Model, agents who become infected with the flu and are symptomatic have a 50% chance of deciding to stay at home for the duration of time it takes them to recover.
+This model builds on the Simple Flu model (see `../simpleflu`) by equipping agents with rudimentary social distancing behavior. In the Simple Flu model, agents with the flu continue to behave in the same way as agents without the flu, and will continue to visit all the places they usually visit including work and school. In the Flu with Behavior model, agents who become infected with the flu and are symptomatic have a 50% chance of deciding to stay at home for the duration of time it takes them to recover.
 
 ## Review of code implementing the model
 
-The code that implements the Flu with Behavior Model is contained in three `.fred` files:
+The code that implements the Flu with Behavior model is contained in three `.fred` files:
 
 - `main.fred`
 - `simpleflu.fred`
 - `stayhome.fred`
 
-Here we review the code in these files, focusing on how features of the FRED language are used to implement the Flu with Behavior Model described above.
+Here we review the code in these files, focusing on how features of the FRED language are used to implement the Flu with Behavior model described above.
 
 ### `main.fred`
 
-Like most FRED models, the entry point to the Flu with Behavior Model is a file called `main.fred`. This file specifies the basic simulation control parameters and coordinates how relevant sub-models are loaded. The `simulation` code block from `main.fred` is given below
+Like most FRED models, the entry point to the Flu with Behavior model is a file called `main.fred`. This file specifies the basic simulation control parameters and coordinates how relevant sub-models are loaded. The `simulation` code block from `main.fred` is given below
 
 ```fred
 simulation {
@@ -48,7 +48,7 @@ The use of separate files to contain sub-models helps to keep code organized, im
 4. Infectious and asymptomatic with influenza
 5. Recovered following infection with influenza and assumed to be immune
 
-Refer to the tutorial on the Simple Flu Model for a complete explanation of the code in `simpleflu.fred`. For the purpose of this tutorial, consider the following code snippet which specifies the State rules for the `InfectiousSymptomatic` and `Recovered` States belonging to the `INFLUENZA` condition:
+Refer to the tutorial on the Simple Flu model for a complete explanation of the code in `simpleflu.fred`. For the purpose of this tutorial, consider the following code snippet which specifies the State rules for the `InfectiousSymptomatic` and `Recovered` States belonging to the `INFLUENZA` condition:
 
 ```fred
     state InfectiousSymptomatic {
@@ -70,7 +70,7 @@ Here `INFLUENZA.trans = 1` and `INFLUENZA.trans = 0` are action rules that cause
 
 ### `stayhome.fred`
 
-This file contains the code that implements the social distancing sub-model that is particular to the Flu with Behavior Model. We first specify a new Condition, `STAY_HOME`
+This file contains the code that implements the social distancing sub-model that is particular to the Flu with Behavior model. We first specify a new Condition, `STAY_HOME`
 
 ```fred
 condition STAY_HOME {
@@ -134,24 +134,242 @@ This is an example of modifying the state rules of a State that is assumed to ha
 
 ### Running the model
 
-Note that these instructions are for running a model locally. We may need to revisit this to explain how to run a model from a Docker image (see [discussion](https://epistemix.slack.com/archives/C01FCU4GNGH/p1605890953029300)).
+Here we demonstrate how to run the model described above, and explore three use cases showing how the model can be used to help address policy questions. Note that these instructions assume that you are running the model with a local FRED installation such as that obtained by following the [installation instructions in the FRED Guide](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/install.html#installing-fred-from-source). If you are running FRED using another method (from inside a Docker image, for example) you may need to modify these instructions accordingly.
 
-Open a terminal and navigate to the directory where the Flu with Behavior model is saved, for example:
+To run the Flu with Behavior model, open a terminal and navigate to the directory where the Flu with Behavior model is saved, for example:
 
 ```bash
 cd ~/models/flu-with-behavior
 ```
 
-We can use the `METHODS` script provided with the model files to run the model and generate some visualizations of its outputs:
+Ensure that the shell environment variables `$FRED_HOME` and `$FRED_DATA` are set to appropriate values, e.g.
+
+```bash
+$ echo $FRED_HOME
+/home/$USER/Projects/FRED-dev
+$ echo $FRED_DATA
+/home/$USER/Projects/FRED-data
+```
+
+These variables provide the model run script with details of where to find the necessary FRED executables and data specifying the synthetic population.
+
+We can now run the model with default settings and generate some visualizations of its outputs using the `./METHODS` script provided with the model files:
 
 ```bash
 ./METHODS
 ```
 
-#### TODO
+This generates the file `flatten.pdf` which contains a plot showing two time series that enable use to compare the number of individuals exposed to influenza under two different modeling **scenarios**: one with `NoDistancing` (the original Simple Flu model), and one with `Distancing` (the Flu with Behavior model).
 
-- Include images of model outputs
-- Run simulated experiments suggested in TODO.txt
+![Time series of exposed individuals with and without distancing behavior](img/flatten-methods.png "Default model output from the ./METHODS script")
+
+We see that the social distancing behaviors included in the Flu with Behavior model appear to both delay and reduce the magnitude of the peak number of individuals exposed to the virus during the modeled epidemic.
+
+In the following sections we demonstrate an exploratory model workflow in which we modify details of the model code to investigate:
+
+1. The sensitivity of the model outputs to certain modeling assumptions
+2. The effect of alternative policy decisions on the emergent dynamics of the epidemic
+
+### Vary likelihood that symptomatic individuals decide to stay home
+
+A major modeling assumption in the Flu with Behavior model that is that all agents experiencing symptoms of flu decided to stay home with 50% probability. As this assumption is subject to uncertainty, our exploratory analysis of the model should include a sensitivity analysis of the model to this parameter.
+
+To make varying the probability that symptomatic agents decide to stay home easier, we turn it into parameter called `probSympStayHome`. To do this we change the definition of the `INFLUENZA.InfectiousSymptomatic` in `stayhome.fred` to
+
+```fred
+state INFLUENZA.InfectiousSymptomatic {
+    if (bernoulli(probSympStayHome)==1) then set_state(STAY_HOME,Yes)
+}
+```
+
+We now modify `main.fred` so that it loads a file called `parameters.fred` in addition to the model files `simpleflu.fred` and `stayhome.fred`
+
+```fred
+...
+include simpleflu.fred
+include stayhome.fred
+include parameters.fred
+```
+
+We can now create a script that performs a [parameter sweep](https://epistemix-fred-guide.readthedocs-hosted.com/en/latest/user_guide/chapter13/chapter13.html#chapter-13-running-parameter-sweeps), in which the model is run multiple times, with each run using a different value for `ProbSympStayHome`. This script could be written in the scripting language of the user's choice. The following is a bash script that runs the model with the probability of staying home with symptoms set to 10%, 30%, 50%, and 70%. It then plots time series of the number of exposed individuals for each of these parameter values.
+
+```bash
+#! /usr/bin/env bash
+
+PROB_STAY_HOMES='0.1 0.3 0.5 0.7'
+
+for P in $PROB_STAY_HOMES
+do
+    # Generate parameters.fred file
+    printf "parameters {\n    ProbSympStayHome = ${P}\n}\n" > parameters.fred
+
+    # Determine the job name for the run with this parameter
+    KEY="stay-home-prob=${P}"
+    # Add job name to an accumulating list of job names
+    KEY_LIST="${KEY_LIST},${KEY}"
+    # Add parameter to an accumulating list of parameters
+    PARAM_LIST="${PARAM_LIST},ProbSympStayHome=${P},"
+
+    # Clear any existing results with this key
+    fred_delete -f -k $KEY
+
+    # Run the simulation
+    fred_job -k $KEY -p main.fred -n 4 -m 2
+done
+
+# Plot the results
+fred_plot -o prob-stay-home -k $KEY_LIST \
+    -v INFLUENZA.newExposed,INFLUENZA.newExposed \
+    -t "Probability of staying home parameter sweep" \
+    -l $PARAM_LIST
+```
+
+We can specify the value for this parameter at the time we run the model by appending the following `parameters` block
+
+#### TODO Address error produced when running the above script
+
+Produces the error
+
+```
+Bad variable name in parameters block:
+  ProbSympStayHome = 0.7
+```
+
+### Individuals continue to attend School when sick
+
+In this scenario we investigate the effect of causing agents who experience symptoms of flu to continue to attend school. This might represent the effect of a policy decision to discourage students from social distancing out of concern for the impact it would have on their education.
+
+Reset the probability that symptomatic agents decide to stay home to 50% in `stayhome.fred`:
+
+```fred
+state INFLUENZA.InfectiousSymptomatic {
+    if (bernoulli(0.5)==1) then set_state(STAY_HOME,Yes)
+}
+```
+
+Create a copy of `stayhome.fred` called `workers-stayhome.fred`
+
+```bash
+cp stayhome.fred workers-stayhome.fred
+```
+
+Modify the actions in the `STAY_HOME.Yes` state  in `workers-stayhome.fred` so that agents are present at `School` as well as their `Household`
+
+```fred
+condition STAY_HOME {
+
+    state No {}
+
+    state Yes {
+        absent()
+        present(Household)
+        present(School)
+        wait()
+        next()
+    }
+}
+```
+
+Create a new `main.fred` that includes `workers-stayhome.fred` rather than the original `stayhome.fred`
+
+```bash
+cp main.fred main-workers-stayhome.fred
+```
+
+Modify `main-workers-stayhome.fred` so it includes `workers-stayhome.fred` instead of `stayhome.fred`
+
+```fred
+...
+include simpleflu.fred
+include workers-stayhome.fred
+```
+
+Write a bash script to run the simulations and plot the results, call this `workers-stayhome.sh`
+
+```bash
+#! /usr/bin/env bash
+
+fred_delete -f -k flu-with-behavior
+fred_delete -f -k workers-stayhome
+
+fred_job -k flu-with-behavior -p main.fred -n 4 -m 2
+fred_job -k workers-stayhome -p main-workers-stayhome.fred -n 4 -m 2
+
+fred_plot -o workers-stayhome -k flu-with-behavior,workers-stayhome, \
+	  -v INFLUENZA.newExposed,INFLUENZA.newExposed \
+	  -t "Workers stay home but students go to school"  \
+	  -l AllStayHome,WorkersStayHome, --clean
+```
+
+Running this script produces the following output
+
+![Time series of exposed individuals with and without students staying home](img/workers-stayhome.png "Effect of students staying home or not")
+
+We see that having only workers stay home and encouraging students to go to school is less effective at reducing the number of people exposed to the flu than if everyone considers staying home when they experience symptoms. Specifically, allowing everyone to stay home if they choose to do so upon becoming symptomatic reduces the number of exposures and delays the peak daily number of exposures compared to if students are forced to attend school.
+
+### Individuals continue to attend Work when sick
+
+Here we consider the case where agents are allowed to stay home from school when they experience symptoms, but agents who go to work are not allowed to stay home. This is effectively the inverse of the previous scenario, and consequently many of the changes to the model files are analogous. This scenario might represent the effect of a policy decision to discourage workers from social distancing out of concern for the impact it would have on the economy.
+
+Create a copy of `stayhome.fred` called `students-stayhome.fred`
+
+```bash
+cp stayhome.fred students-stayhome.fred
+```
+
+Modify the actions in the `STAY_HOME.Yes` state  in `students-stayhome.fred` so that agents are present at `Workplace` as well as their `Household`
+
+```fred
+condition STAY_HOME {
+
+    state No {}
+
+    state Yes {
+        absent()
+        present(Household)
+        present(Workplace)
+        wait()
+        next()
+    }
+}
+```
+
+Create a new `main.fred` that includes `students-stayhome.fred` rather than the original `stayhome.fred`
+
+```bash
+cp main.fred main-students-stayhome.fred
+```
+
+Modify `main-workers-stayhome.fred` so it includes `students-stayhome.fred` instead of `stayhome.fred`
+
+```fred
+...
+include simpleflu.fred
+include students-stayhome.fred
+```
+
+Write a bash script to run the simulations and plot the results, call this `students-stayhome.fred`
+
+```bash
+#! /usr/bin/env bash
+
+fred_delete -f -k flu-with-behavior
+fred_delete -f -k students-stayhome
+
+fred_job -k flu-with-behavior -p main.fred -n 4 -m 2
+fred_job -k students-stayhome -p main-students-stayhome.fred -n 4 -m 2
+
+fred_plot -o students-stayhome -k flu-with-behavior,students-stayhome, \
+	  -v INFLUENZA.newExposed,INFLUENZA.newExposed \
+	  -t "Students stay home but workers go to work"  \
+	  -l AllStayHome,StudentsStayHome, --clean
+```
+
+Running this script produces the following output
+
+![Time series of exposed individuals with and without workers staying home](img/students-stayhome.png "Effect of workers staying home or not")
+
+Like the scenario where students were forced to attend school but workers could choose to stay home, when students are allowed to stay home but workers must go to work, the number of agents exposed to the flu is higher than if everyone is allowed to stay home. However, unlike in the previous scenario, allowing workers as well as students stay home doesn't appear to cause a delay in the peak daily number of agents exposed to the flu compared to if only students are allowed to stay home.
 
 ## Summary
 
