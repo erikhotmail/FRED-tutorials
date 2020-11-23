@@ -13,7 +13,7 @@ condition STAY_HOME {
 
 
 state INFLUENZA.InfectiousSymptomatic {
-    if (bernoulli(0.5)==1) then set_state(STAY_HOME,Yes)
+    if (bernoulli(ProbSympStayHome)==1) then set_state(STAY_HOME,Yes)
 }
 
 
